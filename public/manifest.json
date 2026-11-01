@@ -1,0 +1,25 @@
+{
+  "name": "Baca Buku — Personal Cloud E-Reader",
+  "short_name": "Baca Buku",
+  "description": "Personal Cloud E-Reader dari Google Drive dengan sinkronisasi lintas perangkat & AI Reading Buddy.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
