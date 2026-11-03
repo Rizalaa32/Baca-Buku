@@ -28,7 +28,9 @@ function LoginCard() {
           <div>
             {error === "AccessDenied"
               ? "Akses ditolak. Aplikasi ini bersifat pribadi dan hanya mengizinkan alamat email pemilik (ALLOWED_EMAIL)."
-              : "Gagal masuk menggunakan akun Google. Silakan coba kembali."}
+              : error === "MissingDriveScope"
+                ? "Izin Google Drive belum diberikan. Saat login, centang izin untuk melihat file di Google Drive, lalu lanjutkan."
+                : "Gagal masuk menggunakan akun Google. Silakan coba kembali."}
           </div>
         </div>
       )}

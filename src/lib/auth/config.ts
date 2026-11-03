@@ -80,11 +80,16 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, profile }) {
+    async signIn({ user, profile, account }) {
       const candidateEmail = profile?.email ?? user?.email;
       if (!isAllowedEmail(candidateEmail)) {
         console.warn(`[Auth] Login ditolak untuk email di luar whitelist: ${candidateEmail}`);
         return "/login?error=AccessDenied";
+      }
+      // Google memperbolehkan user menghapus centang izin Drive di layar persetujuan.
+      if (account?.scope && !account.scope.includes("auth/drive.readonly")) {
+        console.warn("[Auth] Login ditolak: izin Google Drive tidak diberikan.");
+        return "/login?error=MissingDriveScope";
       }
       return true;
     },
