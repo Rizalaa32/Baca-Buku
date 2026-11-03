@@ -27,6 +27,8 @@ export interface EpubReaderHandle {
 
 interface EpubReaderViewProps {
   buffer: ArrayBuffer;
+  /** Kunci unik (mis. fileId + modifiedTime) untuk menyimpan indeks lokasi. */
+  locationsCacheKey?: string;
   initialLocation?: string | null;
   prefs: ReaderPreferences;
   isTocOpen: boolean;
@@ -53,6 +55,7 @@ export const EpubReaderView = forwardRef<EpubReaderHandle, EpubReaderViewProps>(
   function EpubReaderView(
     {
       buffer,
+      locationsCacheKey,
       initialLocation,
       prefs,
       isTocOpen,
@@ -167,11 +170,33 @@ export const EpubReaderView = forwardRef<EpubReaderHandle, EpubReaderViewProps>(
       // Tampilkan posisi terakhir atau halaman pembuka
       void rendition.display(initialLocation || undefined);
 
-      // Generate indeks lokasi di latar belakang untuk kalkulasi persentase presisi
+      // Indeks lokasi untuk persentase presisi. Hasilnya disimpan di localStorage
+      // supaya pembukaan berikutnya tidak perlu menghitung ulang (berat untuk buku besar).
+      const storageKey = locationsCacheKey
+        ? `epub-locations:${locationsCacheKey}`
+        : null;
       book.ready
-        .then(() => book.locations.generate(1200))
-        .then((locations) => {
-          totalLocationsRef.current = locations.length;
+        .then(async () => {
+          let saved: string | null = null;
+          try {
+            saved = storageKey ? window.localStorage.getItem(storageKey) : null;
+          } catch {
+            saved = null;
+          }
+
+          if (saved) {
+            book.locations.load(saved);
+          } else {
+            await book.locations.generate(1200);
+            if (storageKey) {
+              try {
+                window.localStorage.setItem(storageKey, book.locations.save());
+              } catch {
+                // Abaikan bila kuota localStorage penuh
+              }
+            }
+          }
+          totalLocationsRef.current = book.locations.length();
         })
         .catch(() => {
           // Abaikan bila struktur EPUB tidak standar

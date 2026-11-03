@@ -35,16 +35,27 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    // 1. Validasi bahwa file berada di GOOGLE_DRIVE_FOLDER_ID & berformat EPUB/PDF
-    const metadata = await getVerifiedDriveBookMetadata(accessToken, fileId);
-
-    // 2. Teruskan Range header bila browser / PDF.js meminta chunk parsial
+    // 1 & 2. Validasi folder/format DAN mulai unduh secara paralel (hemat 1 round-trip ke Drive).
+    //    Stream hanya dikembalikan bila validasi lolos; bila gagal, unduhan dibatalkan.
     const rangeHeader = request.headers.get("range");
-    const upstream = await fetchDriveFileBinaryStream(
+    const upstreamPromise = fetchDriveFileBinaryStream(
       accessToken,
       fileId,
       rangeHeader
     );
+    upstreamPromise.catch(() => undefined);
+
+    let metadata: Awaited<ReturnType<typeof getVerifiedDriveBookMetadata>>;
+    try {
+      metadata = await getVerifiedDriveBookMetadata(accessToken, fileId);
+    } catch (validationError) {
+      void upstreamPromise
+        .then((res) => res.body?.cancel())
+        .catch(() => undefined);
+      throw validationError;
+    }
+
+    const upstream = await upstreamPromise;
 
     if (!upstream.body) {
       return NextResponse.json(

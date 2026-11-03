@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  isSameInstant,
   loadBookWithIndexedDbCache,
   type CachedBookEntry,
 } from "@/lib/storage/book-cache";
@@ -23,6 +24,13 @@ export function useBookBinaryCache(
   const [downloadPercent, setDownloadPercent] = useState<number | null>(0);
   const [loadedBytes, setLoadedBytes] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState<number>(0);
+
+  // modifiedTime biasanya baru tersedia setelah metadata dari Supabase datang.
+  // Disimpan di ref agar unduhan tidak dibatalkan & diulang saat nilainya berubah.
+  const expectedRef = useRef(expectedModifiedTime);
+  expectedRef.current = expectedModifiedTime;
+  const reloadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -33,7 +41,7 @@ export function useBookBinaryCache(
 
     loadBookWithIndexedDbCache({
       googleFileId,
-      expectedModifiedTime,
+      expectedModifiedTime: expectedRef.current,
       signal: controller.signal,
       onProgress: (percent, bytes) => {
         setDownloadPercent(percent);
@@ -57,8 +65,16 @@ export function useBookBinaryCache(
     return () => {
       controller.abort();
     };
-  }, [googleFileId, expectedModifiedTime]);
+  }, [googleFileId, reloadKey]);
+
+  // Jika cache ternyata usang setelah metadata terbaru diketahui, muat ulang sekali saja.
+  useEffect(() => {
+    if (!bookData || !expectedModifiedTime) return;
+    if (isSameInstant(bookData.driveModifiedTime, expectedModifiedTime)) return;
+    if (reloadedForRef.current === expectedModifiedTime) return;
+    reloadedForRef.current = expectedModifiedTime;
+    setReloadKey((k) => k + 1);
+  }, [bookData, expectedModifiedTime]);
 
   return { bookData, isLoading, downloadPercent, loadedBytes, error };
 }
-

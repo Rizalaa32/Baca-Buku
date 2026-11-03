@@ -66,7 +66,9 @@ export async function syncDriveBooksWithSupabase(
 
     const needsSync =
       !existing ||
-      existing.drive_modified_time !== book.modifiedTime ||
+      !existing.drive_modified_time ||
+      new Date(existing.drive_modified_time).getTime() !==
+        new Date(book.modifiedTime).getTime() ||
       existing.cover_url !== proxyCoverUrl ||
       existing.file_size_bytes !== book.sizeBytes;
 

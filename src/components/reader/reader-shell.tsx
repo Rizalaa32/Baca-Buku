@@ -359,6 +359,7 @@ export function ReaderShell({ googleFileId }: ReaderShellProps) {
               <EpubReaderView
                 ref={epubHandleRef}
                 buffer={bookData.buffer}
+                locationsCacheKey={`${googleFileId}:${bookData.driveModifiedTime ?? ""}`}
                 initialLocation={initialProgress?.current_location}
                 prefs={prefs}
                 isTocOpen={isTocOpen}

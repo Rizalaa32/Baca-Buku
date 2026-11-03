@@ -53,6 +53,22 @@ function getCacheDB(): Promise<IDBPDatabase<EReaderCacheSchema>> {
 }
 
 /**
+ * Membandingkan dua timestamp berdasarkan waktu sebenarnya, bukan teksnya.
+ * Google Drive memakai format "...000Z" sedangkan Supabase memakai "...+00:00",
+ * sehingga perbandingan string akan selalu menganggap cache usang.
+ */
+export function isSameInstant(
+  a?: string | null,
+  b?: string | null
+): boolean {
+  if (!a || !b) return true;
+  const timeA = new Date(a).getTime();
+  const timeB = new Date(b).getTime();
+  if (Number.isNaN(timeA) || Number.isNaN(timeB)) return a === b;
+  return timeA === timeB;
+}
+
+/**
  * Mengambil buku dari IndexedDB jika tersedia dan belum usang dibanding modifiedTime Google Drive.
  */
 export async function getCachedBookBinary(
@@ -65,11 +81,7 @@ export async function getCachedBookBinary(
     if (!entry) return null;
 
     // Invalidasi otomatis bila file di Google Drive diperbarui
-    if (
-      expectedModifiedTime &&
-      entry.driveModifiedTime &&
-      entry.driveModifiedTime !== expectedModifiedTime
-    ) {
+    if (!isSameInstant(entry.driveModifiedTime, expectedModifiedTime)) {
       await db.delete(STORE_NAME, googleFileId);
       return null;
     }
